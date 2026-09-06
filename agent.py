@@ -23,6 +23,7 @@ Setup:
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -94,6 +95,12 @@ HA_REQUIRE_CONFIRM = os.getenv("HA_REQUIRE_CONFIRM", "true").lower() == "true"
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 RECORD_SECONDS = int(os.getenv("RECORD_SECONDS", "5"))
 CONFIRM_RECORD_SECONDS = int(os.getenv("CONFIRM_RECORD_SECONDS", "3"))
+# If `sox` is installed, recording auto-stops this many seconds after you stop
+# talking instead of always waiting the full RECORD_SECONDS — cuts wasted
+# waiting on short commands. Threshold is sox's silence-detection sensitivity
+# (higher % = requires quieter silence to trigger a stop).
+SILENCE_DURATION = os.getenv("SILENCE_DURATION", "1.2")
+SILENCE_THRESHOLD = os.getenv("SILENCE_THRESHOLD", "3%")
 PIPER_BINARY = os.getenv("PIPER_BINARY", "piper")
 PIPER_MODEL = os.getenv("PIPER_MODEL", "")
 
@@ -535,27 +542,52 @@ def _get_whisper_model():
     return _whisper_model
 
 
+def _record_with_silence_cutoff(wav_path: str, max_seconds: int) -> bool:
+    """Record via sox's `rec`, auto-stopping once you stop talking instead of
+    always waiting the full max duration. Returns False (caller should fall
+    back to fixed-duration arecord) if `sox` isn't installed — this is a pure
+    speed optimization, not a hard requirement."""
+    if shutil.which("rec") is None:
+        return False
+    try:
+        subprocess.run(
+            [
+                "rec", "-q", "-r", "16000", "-c", "1", wav_path,
+                "silence", "1", "0.1", SILENCE_THRESHOLD,
+                "1", str(SILENCE_DURATION), SILENCE_THRESHOLD,
+            ],
+            check=True, capture_output=True, timeout=max_seconds + 2,
+        )
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return False
+
+
 def listen(record_seconds: int | None = None) -> str:
-    """Record audio from the default mic via arecord, transcribe with faster-whisper.
-    `record_seconds` overrides the global RECORD_SECONDS (used for short yes/no)."""
+    """Record audio from the default mic, transcribe with faster-whisper.
+    `record_seconds` overrides the global RECORD_SECONDS (used for short
+    yes/no) and also acts as the max duration when silence-cutoff recording
+    is available (via `sox`) — recording stops as soon as you stop talking
+    instead of always waiting the full duration."""
     if record_seconds is None:
         record_seconds = RECORD_SECONDS
     wav_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             wav_path = f.name
-        console.print(f"[cyan]Listening for {record_seconds}s...[/cyan] (speak now)")
-        try:
-            subprocess.run(
-                ["arecord", "-d", str(record_seconds), "-f", "cd", "-t", "wav", wav_path],
-                check=True, capture_output=True,
-            )
-        except FileNotFoundError:
-            console.print("[bold red]'arecord' not found.[/bold red] Install it: sudo apt install alsa-utils")
-            return ""
-        except subprocess.CalledProcessError as e:
-            console.print(f"[bold red]Recording failed:[/bold red] {e.stderr.decode(errors='ignore')}")
-            return ""
+        console.print(f"[cyan]Listening (up to {record_seconds}s)...[/cyan] (speak now)")
+        if not _record_with_silence_cutoff(wav_path, record_seconds):
+            try:
+                subprocess.run(
+                    ["arecord", "-d", str(record_seconds), "-f", "cd", "-t", "wav", wav_path],
+                    check=True, capture_output=True,
+                )
+            except FileNotFoundError:
+                console.print("[bold red]'arecord' not found.[/bold red] Install it: sudo apt install alsa-utils")
+                return ""
+            except subprocess.CalledProcessError as e:
+                console.print(f"[bold red]Recording failed:[/bold red] {e.stderr.decode(errors='ignore')}")
+                return ""
 
         model = _get_whisper_model()
         segments, _ = model.transcribe(
