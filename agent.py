@@ -47,8 +47,37 @@ console = Console()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 MODEL_NAME = os.getenv("MODEL_NAME", "my-agent")
-MAX_TOOL_STEPS = 8
+MAX_TOOL_STEPS = int(os.getenv("MAX_TOOL_STEPS", "8"))
 WORKDIR_SCOPE = Path.cwd()
+
+# How long Ollama should keep the model loaded in RAM between calls. Without
+# this, Ollama's default (5 min) can unload the model between turns in a slow
+# back-and-forth conversation, forcing a multi-second reload on the next
+# message. "-1" keeps it loaded indefinitely (fine for a dedicated box).
+OLLAMA_KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE", "10m")
+# Read timeout for a single Ollama call — generous by default since CPU-only
+# inference can take a while on longer replies.
+OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "180"))
+# Retries for transient connection/timeout failures only (never for a reply
+# Ollama actually returned) — covers brief hiccups like Ollama still starting.
+OLLAMA_MAX_RETRIES = int(os.getenv("OLLAMA_MAX_RETRIES", "2"))
+
+# Shared session: reuses TCP connections to Ollama/Home Assistant instead of
+# opening a new one on every request, and centralizes retry policy for
+# connection-level failures (DNS hiccup, connection refused, etc.) so a
+# flaky moment doesn't kill an otherwise-working turn.
+_session = requests.Session()
+_retry = requests.adapters.Retry(
+    total=2,
+    connect=2,
+    read=0,  # read/timeout retries are handled explicitly in call_model
+    backoff_factor=0.5,
+    status_forcelist=(502, 503, 504),
+    allowed_methods=frozenset(["GET", "POST"]),
+)
+_adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10, max_retries=_retry)
+_session.mount("http://", _adapter)
+_session.mount("https://", _adapter)
 
 # Conversation context management
 MAX_CONTEXT_MESSAGES = int(os.getenv("MAX_CONTEXT_MESSAGES", "20"))  # rolling window
@@ -67,6 +96,15 @@ RECORD_SECONDS = int(os.getenv("RECORD_SECONDS", "5"))
 CONFIRM_RECORD_SECONDS = int(os.getenv("CONFIRM_RECORD_SECONDS", "3"))
 PIPER_BINARY = os.getenv("PIPER_BINARY", "piper")
 PIPER_MODEL = os.getenv("PIPER_MODEL", "")
+
+# Whisper tuning for non-native/accented English. Forcing the language stops
+# Whisper from ever mis-guessing the spoken language from an accent (its
+# auto-detect only looks at the first ~30s and can flip languages mid-guess
+# on accented speech, producing garbage). A higher beam_size searches more
+# candidate transcriptions before picking one — slower but more accurate.
+WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "en")
+WHISPER_BEAM_SIZE = int(os.getenv("WHISPER_BEAM_SIZE", "5"))
+WHISPER_VAD_FILTER = os.getenv("WHISPER_VAD_FILTER", "true").lower() == "true"
 
 # Optional friendly device map: "living room light" -> "light.living_room".
 # The model consults this as a hint before hitting Home Assistant live.
@@ -161,7 +199,7 @@ def validate_config() -> list[str]:
 
     # Ollama reachability
     try:
-        requests.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=3)
+        _session.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=3)
     except Exception:
         warnings.append(f"Could not reach Ollama at {OLLAMA_URL}. Is it running?")
 
@@ -185,7 +223,7 @@ def voice_enabled() -> bool:
 
 def VisionAvailable() -> bool:
     try:
-        resp = requests.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=3)
+        resp = _session.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=3)
         resp.raise_for_status()
         models = [m.get("name", "") for m in resp.json().get("models", [])]
         return any(VISION_MODEL in m for m in models)
@@ -302,7 +340,7 @@ def _ha_call_service(domain: str, service: str, entity_id: str, extra: dict | No
         return {"error": "HA_URL / HA_TOKEN not set. Copy config.example.env to .env and fill them in."}
     payload = {"entity_id": entity_id, **(extra or {})}
     try:
-        resp = requests.post(f"{HA_URL}/api/services/{domain}/{service}", headers=_ha_headers(), json=payload, timeout=10)
+        resp = _session.post(f"{HA_URL}/api/services/{domain}/{service}", headers=_ha_headers(), json=payload, timeout=10)
         resp.raise_for_status()
         return {"status": "ok", "result": resp.json()}
     except Exception as e:
@@ -340,7 +378,7 @@ def ha_get_state(entity_id: str) -> dict:
     if not HA_URL or not HA_TOKEN:
         return {"error": "HA_URL / HA_TOKEN not set."}
     try:
-        resp = requests.get(f"{HA_URL}/api/states/{entity_id}", headers=_ha_headers(), timeout=10)
+        resp = _session.get(f"{HA_URL}/api/states/{entity_id}", headers=_ha_headers(), timeout=10)
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
@@ -351,7 +389,7 @@ def ha_list_entities(domain: str = "") -> dict:
     if not HA_URL or not HA_TOKEN:
         return {"error": "HA_URL / HA_TOKEN not set."}
     try:
-        resp = requests.get(f"{HA_URL}/api/states", headers=_ha_headers(), timeout=10)
+        resp = _session.get(f"{HA_URL}/api/states", headers=_ha_headers(), timeout=10)
         resp.raise_for_status()
         states = resp.json()
         entities = []
@@ -476,6 +514,18 @@ TOOLS = {
 _whisper_model = None
 
 
+def _whisper_vocab_hint() -> str | None:
+    """Build a short phrase of known device names/commands to prime Whisper
+    toward the right vocabulary. Whisper uses `initial_prompt` as a style/
+    vocabulary hint — this doesn't force a transcription, but it noticeably
+    helps it land on domain words (device names, entity ids) instead of the
+    nearest-sounding English word, especially with an accent."""
+    words = list(HA_ENTITY_MAP.keys())
+    if not words:
+        return None
+    return "Devices: " + ", ".join(words) + "."
+
+
 def _get_whisper_model():
     global _whisper_model
     if _whisper_model is None:
@@ -508,7 +558,13 @@ def listen(record_seconds: int | None = None) -> str:
             return ""
 
         model = _get_whisper_model()
-        segments, _ = model.transcribe(wav_path)
+        segments, _ = model.transcribe(
+            wav_path,
+            language=WHISPER_LANGUAGE,
+            beam_size=WHISPER_BEAM_SIZE,
+            vad_filter=WHISPER_VAD_FILTER,
+            initial_prompt=_whisper_vocab_hint(),
+        )
         text = " ".join(seg.text.strip() for seg in segments)
         console.print(f"[bold blue]you (voice)>[/bold blue] {text}")
         return text.strip()
@@ -605,7 +661,7 @@ def run_wake_word_loop() -> None:
 
 def _model_available() -> bool:
     try:
-        requests.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=3)
+        _session.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=3)
         return True
     except Exception:
         return False
@@ -613,15 +669,38 @@ def _model_available() -> bool:
 
 def call_model(messages: list[dict]) -> str:
     """Call Ollama. Raises a friendly error if unreachable, so the caller can
-    show a useful message instead of a stack trace."""
-    if not _model_available():
-        raise ConnectionError("Ollama is not reachable.")
-    resp = requests.post(OLLAMA_URL, json={"model": MODEL_NAME, "messages": messages, "stream": False}, timeout=120)
-    resp.raise_for_status()
-    try:
-        return resp.json()["message"]["content"]
-    except (KeyError, ValueError) as e:
-        raise RuntimeError(f"Unexpected response from Ollama: {e}")
+    show a useful message instead of a stack trace.
+
+    Previously this did a separate GET to /api/tags before every single call
+    to check reachability, then made the real POST — doubling round-trips on
+    every turn for no benefit (the POST fails the same way if Ollama is down).
+    It also meant a slow-to-load model could look "unreachable" during the
+    3s-timeout ping even though Ollama itself was fine. Now we just try the
+    real call, and retry a couple of times with backoff if it's a transient
+    connection/timeout issue (e.g. Ollama still starting up)."""
+    payload = {
+        "model": MODEL_NAME,
+        "messages": messages,
+        "stream": False,
+        "keep_alive": OLLAMA_KEEP_ALIVE,
+    }
+    last_err: Exception | None = None
+    for attempt in range(OLLAMA_MAX_RETRIES + 1):
+        try:
+            resp = _session.post(OLLAMA_URL, json=payload, timeout=(5, OLLAMA_TIMEOUT))
+            resp.raise_for_status()
+            try:
+                return resp.json()["message"]["content"]
+            except (KeyError, ValueError) as e:
+                raise RuntimeError(f"Unexpected response from Ollama: {e}") from e
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            last_err = e
+            if attempt < OLLAMA_MAX_RETRIES:
+                wait = 0.5 * (2 ** attempt)
+                log_event("ollama_retry", attempt=attempt + 1, error=str(e))
+                time.sleep(wait)
+                continue
+    raise ConnectionError(f"Ollama unreachable after {OLLAMA_MAX_RETRIES + 1} attempt(s): {last_err}")
 
 
 def _trim_context(messages: list[dict]) -> None:
@@ -750,7 +829,7 @@ def run_status_check() -> int:
 
     # Ollama + model
     try:
-        resp = requests.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=5)
+        resp = _session.get(OLLAMA_URL.replace("/api/chat", "/api/tags"), timeout=5)
         resp.raise_for_status()
         model_names = [m.get("name", "") for m in resp.json().get("models", [])]
         have_model = MODEL_NAME in model_names
@@ -764,7 +843,7 @@ def run_status_check() -> int:
     # Home Assistant
     if HA_URL and HA_TOKEN:
         try:
-            resp = requests.get(f"{HA_URL}/api/", headers=_ha_headers(), timeout=5)
+            resp = _session.get(f"{HA_URL}/api/", headers=_ha_headers(), timeout=5)
             table.add_row("Home Assistant", "OK" if resp.ok else f"FAIL ({resp.status_code})", HA_URL)
         except Exception:
             table.add_row("Home Assistant", "FAIL", HA_URL)
