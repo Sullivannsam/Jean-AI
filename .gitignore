@@ -1,0 +1,23 @@
+# Secrets — NEVER commit
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Runtime data / state
+logs/
+memory_store/
+knowledge/index.pkl
+*.pkl
+history.txt
+face_data.pkl
+
+# Third-party binaries (piper TTS — download, don't vendor)
+third_party/

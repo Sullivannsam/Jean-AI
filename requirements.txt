@@ -1,0 +1,9 @@
+requests
+rich
+python-dotenv
+faster-whisper
+opencv-python
+face_recognition
+sounddevice
+numpy
+openwakeword

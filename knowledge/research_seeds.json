@@ -1,0 +1,64 @@
+{
+  "topics": [
+    {
+      "topic": "Home Assistant automations",
+      "urls": [
+        "https://www.home-assistant.io/docs/automation/",
+        "https://www.home-assistant.io/docs/automation/trigger/",
+        "https://www.home-assistant.io/docs/automation/action/"
+      ]
+    },
+    {
+      "topic": "Home Assistant voice assistants",
+      "urls": [
+        "https://www.home-assistant.io/voice_control/",
+        "https://www.home-assistant.io/docs/configuration/"
+      ]
+    },
+    {
+      "topic": "Bug bounty methodology",
+      "urls": [
+        "https://owasp.org/www-project-api-security/"
+      ]
+    },
+    {
+      "topic": "OWASP API Security Top 10",
+      "urls": [
+        "https://owasp.org/API-Security/editions/2023/en/0x11-t10/",
+        "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/"
+      ]
+    },
+    {
+      "topic": "Nmap scanning reference",
+      "urls": [
+        "https://nmap.org/book/man-port-scanning-techniques.html",
+        "https://nmap.org/book/man-host-discovery.html"
+      ]
+    },
+    {
+      "topic": "Burp Suite usage",
+      "urls": [
+        "https://portswigger.net/burp/documentation/desktop/getting-started"
+      ]
+    },
+    {
+      "topic": "Web security testing guide",
+      "urls": [
+        "https://owasp.org/www-project-web-security-testing-guide/"
+      ]
+    },
+    {
+      "topic": "Python reference",
+      "urls": [
+        "https://docs.python.org/3/tutorial/introduction.html",
+        "https://docs.python.org/3/tutorial/controlflow.html"
+      ]
+    },
+    {
+      "topic": "Ollama API reference",
+      "urls": [
+        "https://github.com/ollama/ollama/blob/main/docs/api.md"
+      ]
+    }
+  ]
+}

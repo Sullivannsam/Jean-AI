@@ -1,0 +1,16 @@
+[Unit]
+Description=Personal AI server (HTTP/API + voice + HA)
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Run the server as a module so package imports resolve correctly.
+ExecStart=/usr/bin/env python3 -m server.server
+WorkingDirectory=/home/samm/Personal-Ai-Agent/Model_Components
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,1 @@
+"""AI server package: HTTP API + SSH control + voice."""

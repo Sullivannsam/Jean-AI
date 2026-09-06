@@ -1,0 +1,13 @@
+[Unit]
+Description=Personal AI agent - always-listening wake word assistant
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 /home/samm/Personal-Ai-Agent/Model_Components/agent.py --wake
+WorkingDirectory=/home/samm/Personal-Ai-Agent/Model_Components
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

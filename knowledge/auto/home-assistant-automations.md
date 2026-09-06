@@ -1,0 +1,1275 @@
+# Research: Home Assistant automations
+
+> Auto-researched on 2026-09-02 17:50
+> Fetched from source URLs below. Content is unedited extracts.
+
+## Source: https://www.home-assistant.io/docs/automation/
+
+Automating Home Assistant - Home Assistant 
+
+ 2026.8.3
+
+Getting started 
+
+ Documentation
+
+Installation 
+
+Automations 
+
+Dashboards 
+
+Voice assistants 
+
+Device organization 
+
+Energy management 
+
+Templating 
+
+Configuration using the YAML file 
+
+ Our hardware
+
+Home Assistant Green 
+
+Connect ZBT-2 
+
+Connect ZWA-2 
+
+Voice Preview Edition 
+
+Integrations 
+
+Blog 
+
+Need help? 
+
+ On this page Learn about automation blueprints » 
+
+Learn about automation basics » 
+
+ Home
+
+ ▸ Documentation
+
+ Automating Home Assistant
+
+Automations are how you make your home work for you. They let Home Assistant automatically respond to things that happen, such as turning the lights on at sunset or pausing the music when you receive a call. 
+
+You build automations in Home Assistant with the visual automation editor, so no coding is required. Home Assistant already knows about all your devices A device is a model representing a physical or logical unit that contains entities. and services The term “service” in Home Assistant is used in the sense of an information
+service . For example, the municipal waste management service that provides
+entities for organic, paper, and packaging waste. In terms of functionality,
+the information service is like a device. It is called service to avoid
+confusion, as it does not come with a piece of hardware. , so you can pick from them directly when you decide what should trigger an automation and what should happen as a result. 
+
+If you are just starting out, we recommend that you start with blueprint automations. These are ready-made automations from the community that you only need to configure. 
+
+## Learn about automation blueprints »
+
+If you have got the hang of blueprints and would like to explore more, it’s time for the next step. But before you start creating automations, you will need to learn about the automation basics. 
+
+## Learn about automation basics »
+
+ Help us improve our documentation 
+
+ Suggest an edit to this page, or provide/view feedback for this page.
+
+Edit 
+
+Provide feedback 
+
+View given feedback 
+
+ ## Documentation Overview
+ |
+ FAQ
+ |
+ Glossary
+
+ Automations
+
+ Understanding automations
+
+Using automation blueprints 
+
+Editor 
+
+Triggers 
+
+Conditions 
+
+Actions 
+
+Run modes 
+
+Automation actions 
+
+Templates 
+
+YAML 
+
+Testing and troubleshooting automations 
+
+ Scenes
+
+ Blueprints
+
+ Scripts
+
+ Dashboards
+
+ Voice assistants
+
+ Organization
+
+ Home energy management
+
+ Templating
+
+ Common tasks
+
+ Configuration
+
+ Authentication
+
+ Tools and helpers
+
+ iOS and Android apps
+
+ Official hardware
+
+Home Assistant Green 
+
+Home Assistant Connect ZBT-1 
+
+Home Assistant Connect ZBT-2 
+
+Home Assistant Connect ZWA-2 
+
+Home Assistant Yellow 
+
+Home Assistant Voice Preview Edition 
+
+## On this page
+
+Learn about automation blueprints » 
+
+Learn about automation basics » 
+
+Back to top 
+
+ Home Assistant is a project from the Open Home Foundation.
+
+## Join us and contribute!
+
+GitHub repo 
+
+Developers Portal 
+
+Design Portal 
+
+Data Science Portal 
+
+Community Forum 
+
+Creator Network 
+
+Works with Home Assistant 
+
+Our community 
+
+Reporting issues 
+
+## System status
+
+ Integration Alerts
+
+Security Alerts 
+
+ System Status
+
+## Companion apps
+
+iOS and Apple devices 
+
+Android and Wear OS 
+
+...and more! 
+
+## Support us
+
+Merch store 
+
+Home Assistant Cloud 
+
+## Governance
+
+Privacy Notices 
+
+Contributor License Agreement 
+
+Terms of Service 
+
+Code of Conduct 
+
+Credits 
+
+License 
+
+## Follow us
+
+Sign up for our newsletter 
+
+ For partnership inquiries please check out Works with Home Assistant. For media, email our team. For other questions, you can contact support (No technical support!)
+
+ This website uses privacy-first analytics to help us improve the site. You can view all data in our public dashboard.
+
+ Website powered by Jekyll
+
+ Originally based on the Oscailte theme
+
+## Source: https://www.home-assistant.io/docs/automation/trigger/
+
+Automation triggers - Home Assistant 
+
+ 2026.8.3
+
+Getting started 
+
+ Documentation
+
+Installation 
+
+Automations 
+
+Dashboards 
+
+Voice assistants 
+
+Device organization 
+
+Energy management 
+
+Templating 
+
+Configuration using the YAML file 
+
+ Our hardware
+
+Home Assistant Green 
+
+Connect ZBT-2 
+
+Connect ZWA-2 
+
+Voice Preview Edition 
+
+Integrations 
+
+Blog 
+
+Need help? 
+
+ On this page Choosing a trigger 
+
+Elements of a trigger in YAML
+
+Trigger ID 
+
+Trigger variables 
+
+Types of triggers
+
+Event trigger 
+
+Home Assistant trigger 
+
+MQTT trigger 
+
+Numeric state trigger 
+
+Sentence trigger 
+
+State trigger 
+
+Sun trigger 
+
+Tag trigger 
+
+Template trigger 
+
+Time pattern trigger 
+
+Time trigger 
+
+Webhook trigger 
+
+Zone trigger 
+
+Unavailable and unknown state behavior in triggers 
+
+Multiple triggers 
+
+Multiple entity IDs for the same trigger 
+
+Disabling a trigger 
+
+Merging lists of triggers 
+
+Creating an automation with actions that depend on different triggers 
+
+Related topics 
+
+ Home
+
+ ▸ Documentation
+
+ ▸ Automation
+
+ Automation triggers
+
+A trigger is what wakes an automation up. Until something triggers it, an automation just sits there quietly, waiting. The moment a trigger fires, Home Assistant checks any conditions you set, and if they pass, it runs the actions. 
+
+Triggers can be almost anything that happens in your home or in Home Assistant itself. A motion sensor detecting movement. The sun going down. A specific time of day. A person arriving home. A button on a remote being pressed. Even a voice command spoken to Assist. You can give a single automation more than one trigger, and the automation will start as soon as any of them fires. 
+ Choosing a trigger 
+
+After you select Add trigger in the automation editor, Home Assistant shows triggers that match the target or type that you selected. For many devices and measurements, the best choice is the trigger named after the thing you want to happen. For example, select Door opened for a door sensor, Temperature crossed threshold for a temperature reading, or Power crossed threshold for a power reading. 
+
+These specific triggers handle Home Assistant details for you. Measurement triggers, such as temperature and power triggers, compare compatible units automatically. For example, a temperature sensor can report in Fahrenheit while the trigger threshold is set in Celsius. 
+
+General triggers, such as State and Numeric state , are still available. Use them when you need to watch an exact state, use an attribute, work with a trigger that does not have a more specific option, or edit existing YAML. 
+ Elements of a trigger in YAML 
+
+The main elements of a trigger that are defined in the configuration.yaml file are: 
+
+trigger ID 
+
+trigger variables. 
+
+ Trigger ID 
+
+All triggers can be assigned an optional id . If the ID is omitted, it will instead be set to the index of the trigger. The id can be referenced from trigger conditions and actions. The id does not have to be unique for each trigger, and it can be used to group similar triggers for use later in the automation (such as several triggers of different types that should all turn some entity on). 
+
+Trigger IDs also allow you to set up an automation with many actions, each action depending on a different trigger. An action will be connected to a trigger through the trigger ID and fires only if that trigger is verified. To know how to create an automation using trigger IDs, refer to Creating an automation with actions that depend on different triggers. 
+ YAML example 
+
+ automation : 
+ triggers : 
+ - trigger : event 
+ event_type : " MY_CUSTOM_EVENT" 
+ id : " custom_event" 
+ - trigger : mqtt 
+ topic : " living_room/switch/ac" 
+ id : " ac_on" 
+ - trigger : state # This trigger will be assigned id="2" 
+ entity_id : 
+ - device_tracker.paulus 
+ - device_tracker.anne_therese 
+ to : " home" 
+
+ Trigger variables 
+
+There are two different types of variables available for triggers. Both work like script level variables. 
+
+The first variant allows you to define variables that will be set when the trigger fires. The variables will be able to use templates and have access to the trigger variable. 
+
+The second variant is setting variables that are available when attaching a trigger when the trigger can contain templated values. These are defined using the trigger_variables key at an automation level. These variables can only contain limited templates. The triggers will not re-apply if the value of the template changes. Trigger variables are a feature meant to support using blueprint inputs in triggers. 
+
+ automation : 
+ trigger_variables : 
+ my_event : example_event 
+ triggers : 
+ - trigger : event 
+ # Able to use `trigger_variables` 
+ event_type : " {{ my_event }}" 
+ # These variables are evaluated and set when this trigger is triggered 
+ variables : 
+ name : " {{ trigger.event.data.name }}" 
+
+ Types of triggers 
+
+Each trigger has a type that depends on the target of the trigger, usually corresponding to the domain Each integration in Home Assistant has a unique identifier: The domain. It is often shown as the first part (before the dot) of entity IDs. of the target. 
+
+For an overview of every trigger across all integrations, see the triggers reference. 
+ Event trigger 
+
+For setup steps, YAML options, and examples for the event trigger, see Event trigger. 
+ Home Assistant trigger 
+
+For setup steps, YAML options, and examples for the Home Assistant trigger, see Home Assistant trigger. 
+ MQTT trigger 
+
+Fires when a specific message is received on given MQTT topic. Optionally can match on the payload being sent over the topic. The default payload encoding is ‘utf-8’. For images and other byte payloads use encoding: '' to disable payload decoding completely. 
+
+ automation : 
+ triggers : 
+ - trigger : mqtt 
+ topic : " living_room/switch/ac" 
+ # Optional 
+ payload : " on" 
+ encoding : " utf-8" 
+
+The payload option can be combined with a value_template to process the message received on the given MQTT topic before matching it with the payload.
+The trigger in the example below will trigger only when the message received on living_room/switch/ac is valid JSON, with a key state which has the value "on" . 
+
+ automation : 
+ triggers : 
+ - trigger : mqtt 
+ topic : " living_room/switch/ac" 
+ payload : " on" 
+ value_template : " {{ value_json.state }}" 
+
+It’s also possible to use limited templates in the topic and payload options. 
+
+ Note 
+
+The topic and payload templates are only evaluated when setting up the trigger, they will not be re-evaluated for every incoming MQTT message. 
+
+ automation : 
+ trigger_variables : 
+ room : " living_room" 
+ node : " ac" 
+ value : " on" 
+ triggers : 
+ - trigger : mqtt 
+ topic : " {{ room ~ '/switch/' ~ node}}" 
+ # Optional 
+ payload : " {{ 'state:' ~ value }}" 
+ encoding : " utf-8" 
+
+ Numeric state trigger 
+
+For setup steps, YAML options, and examples for the numeric state trigger, see Numeric state trigger. 
+ Sentence trigger 
+
+For setup steps, YAML options, and examples of a sentence trigger, see Sentence triggers. 
+ Sentence wildcards 
+
+For wildcard syntax and examples, see Sentence wildcards. 
+ State trigger 
+
+For setup steps, YAML options, and examples for the state trigger, see State trigger. 
+ Sun trigger 
+
+ Sunset and Sunrise trigger 
+
+Fires when the sun is setting or rising—that is, when the sun elevation reaches 0°. 
+
+An optional time offset can be given to have it fire a set time before or after the sun event (for example, 45 minutes before sunset). A negative value makes it fire before sunrise or sunset, a positive value afterwards. The offset needs to be specified in number of seconds, or in a hh:mm:ss format. 
+
+ Tip 
+
+Since the duration of twilight is different throughout the year, it is recommended to use sun elevation triggers instead of sunset or sunrise with a time offset to trigger automations during dusk or dawn. 
+
+ automation : 
+ triggers : 
+ - trigger : sun 
+ # Possible values: sunset, sunrise 
+ event : sunset 
+ # Optional time offset. This example will trigger 45 minutes before sunset. 
+ offset : " -00:45:00" 
+
+ Sun elevation trigger 
+
+Sometimes you may want more granular control over an automation than simply sunset or sunrise and specify an exact elevation of the sun. This can be used to layer automations to occur as the sun lowers on the horizon or even after it is below the horizon. This is also useful when the “sunset” event is not dark enough outside and you would like the automation to run later at a precise solar angle instead of the time offset such as turning on exterior lighting. For most automations intended to run during dusk or dawn, a number between 0° and -6° is suitable; -4° is used in this example: 
+
+ automation : 
+ - alias : " Exterior Lighting on when dark outside" 
+ triggers : 
+ - trigger : numeric_state 
+ entity_id : sun.sun 
+ attribute : elevation 
+ # Can be a positive or negative number 
+ below : -4.0 
+ actions : 
+ - action : switch.turn_on 
+ target : 
+ entity_id : switch.exterior_lighting 
+
+If you want to get more precise, you can use this solar calculator, which will help you estimate what the solar elevation will be at any specific time. Then from this, you can select from the defined twilight numbers. 
+
+Although the actual amount of light depends on weather, topography and land cover, they are defined as: 
+
+Civil twilight: 0° > Solar angle > -6° 
+
+This is what is meant by twilight for the average person: Under clear weather conditions, civil twilight approximates the limit at which solar illumination suffices for the human eye to clearly distinguish terrestrial objects. Enough illumination renders artificial sources unnecessary for most outdoor activities. 
+
+Nautical twilight: -6° > Solar angle > -12° 
+
+Astronomical twilight: -12° > Solar angle > -18° 
+
+A very thorough explanation of this is available in the Wikipedia article about the Twilight. 
+ Tag trigger 
+
+Fires when a tag is scanned. For example, an NFC tag is
+scanned using the Home Assistant Companion mobile application. 
+
+ automation : 
+ triggers : 
+ - trigger : tag 
+ tag_id : A7-6B-90-5F 
+
+Additionally, you can also only trigger if a card is scanned by a specific
+device/scanner by setting the device_id : 
+
+ automation : 
+ triggers : 
+ - trigger : tag 
+ tag_id : A7-6B-90-5F 
+ device_id : 0e19cd3cf2b311ea88f469a7512c307d 
+
+Or trigger on multiple possible devices for multiple tags: 
+
+ automation : 
+ triggers : 
+ - trigger : tag 
+ tag_id : 
+ - " A7-6B-90-5F" 
+ - " A7-6B-15-AC" 
+ device_id : 
+ - 0e19cd3cf2b311ea88f469a7512c307d 
+ - d0609cb25f4a13922bb27d8f86e4c821 
+
+ Template trigger 
+
+Template triggers work by evaluating a template when any of the recognized entities change state. The trigger will fire if the state change caused the template to render ‘true’ (a non-zero number or any of the strings true , yes , on , enable ) when it was previously ‘false’ (anything else). 
+
+This is achieved by having the template result in a true boolean expression (for example {{ is_state('device_tracker.paulus', 'home') }} ) or by having the template render true (example below). 
+
+With template triggers you can also evaluate attribute changes by using is_state_attr (like {{ is_state_attr('climate.living_room', 'away_mode', 'off') }} ) 
+
+ automation : 
+ triggers : 
+ - trigger : template 
+ value_template : " {% if is_state('device_tracker.paulus', 'home') %}true{% endif %}" 
+
+ # If given, will trigger when template remains true for X time. 
+ for : " 00:01:00" 
+
+You can also use templates in the for option. 
+
+ automation : 
+ triggers : 
+ - trigger : template 
+ value_template : " {{ is_state('device_tracker.paulus', 'home') }}" 
+ for : 
+ minutes : " {{ states('input_number.minutes')|int(0) }}" 
+
+The for template(s) will be evaluated when the value_template becomes ‘true’. 
+
+Templates that do not contain an entity will be rendered once per minute. 
+
+ Important 
+
+Use of the for option will not survive Home Assistant restart or the reload of automations. During restart or reload, automations that were awaiting for the trigger to pass, are reset. 
+
+If for your use case this is undesired, you could consider using the automation to set an input_datetime to the desired time and then use that input_datetime as an automation trigger to perform the desired actions at the set time. 
+
+ Time pattern trigger 
+
+With the time pattern trigger, you can match if the hour, minute or second of the current time matches a specific value. You can prefix the value with a / to match whenever the value is divisible by that number. You can specify * to match any value. 
+
+ automation : 
+ triggers : 
+ - trigger : time_pattern 
+ # Matches every hour at 5 minutes past whole 
+ minutes : 5 
+
+ automation 2 : 
+ triggers : 
+ - trigger : time_pattern 
+ # Trigger once per minute during the hour of 3 
+ hours : " 3" 
+ minutes : " *" 
+
+ automation 3 : 
+ triggers : 
+ - trigger : time_pattern 
+ # You can also match on interval. This will match every 5 minutes 
+ minutes : " /5" 
+
+ Note 
+
+Do not prefix numbers with a zero - using '01' instead of '1' for example will result in errors. 
+
+ Time trigger 
+
+For setup steps, YAML options, and examples for the time trigger, see Time trigger. 
+ Webhook trigger 
+
+Webhook trigger fires when a web request is made to the webhook endpoint: /api/webhook/<webhook_id> . The webhook endpoint is created automatically when you set it as the webhook_id in an automation trigger. The webhook_id can either be a static value or computed using limited templates. 
+
+ Note 
+
+The webhook_id template is only evaluated when setting up the trigger, they will not be re-evaluated for incoming webhook triggers. 
+
+ automation : 
+ trigger_variables : 
+ webhook_id_variable : " template_webhook_id" 
+ triggers : 
+ - trigger : webhook 
+ webhook_id : " some_hook_id" 
+ allowed_methods : 
+ - POST 
+ - PUT 
+ local_only : true 
+ - trigger : webhook 
+ webhook_id : " {{ webhook_id_variable }}" 
+ allowed_methods : 
+ - POST 
+
+You can run this automation by sending an HTTP POST request to http://your-home-assistant:8123/api/webhook/some_hook_id . Here is an example using the curl command line program, with an example form data payload: 
+
+ curl -X POST -d 'key=value&key2=value2' https://your-home-assistant:8123/api/webhook/some_hook_id
+
+Webhooks support HTTP POST, PUT, HEAD, and GET requests; PUT requests are recommended. HTTP GET and HEAD requests are not enabled by default but can be enabled by adding them to the allowed_methods option. The request methods can also be configured in the UI by selecting the settings gear menu button beside the Webhook ID. 
+
+By default, webhook triggers can only be accessed from devices on the same network as Home Assistant or via Nabu Casa Cloud webhooks. The local_only option should be set to false to allow webhooks to be triggered directly via the internet. This option can also be configured in the UI by selecting the settings gear menu button beside the Webhook ID. 
+
+Remember to use an HTTPS URL if you’ve secured your Home Assistant installation with SSL/TLS. 
+
+Note that a given webhook can only be used in one automation at a time. That is, only one automation trigger can use a specific webhook ID. 
+ Webhook data 
+
+Payloads may either be encoded as form data or JSON. Depending on that, its data will be available in an automation template as either trigger.data or trigger.json . URL query parameters are also available in the template as trigger.query . 
+
+Note that to use JSON encoded payloads, the Content-Type header must be set to application/json , for example: 
+
+ curl -X POST -H "Content-Type: application/json" -d '{ "key": "value" }' https://your-home-assistant:8123/api/webhook/some_hook_id
+
+ Webhook security 
+
+Webhook endpoints don’t require authentication, other than knowing a valid webhook ID. Security best practices for webhooks include: 
+
+Do not use webhooks to trigger automations that are destructive, or that can create safety issues. For example, do not use a webhook to unlock a lock, or open a garage door. 
+
+Treat a webhook ID like a password: use a unique, non-guessable value, and keep it secret. 
+
+Do not copy-and-paste webhook IDs from public sources, including blueprints. Always create your own. 
+
+Keep the local_only option enabled for webhooks if access from the internet is not required. 
+
+ Zone trigger 
+
+Zone trigger fires when an entity is entering or leaving the zone. The entity can be either a person or a device tracker. 
+
+ automation : 
+ triggers : 
+ - trigger : zone 
+ entity_id : person.paulus 
+ zone : zone.home 
+ # Event is either enter or leave 
+ event : enter # or "leave" 
+
+ Unavailable and unknown state behavior in triggers 
+
+Most triggers that have an entity as the target do not fire when an entity transitions from an unavailable or unknown state. For example, if a light goes offline and comes back on, the light.turned_on trigger does not fire for that recovery. 
+
+ Tip 
+
+This isn’t for use with device_tracker entities. For those look above at the zone trigger. 
+
+ automation : 
+ triggers : 
+ - trigger : geo_location 
+ source : nsw_rural_fire_service_feed 
+ zone : zone.bushfire_alert_zone 
+ # Event is either enter or leave 
+ event : enter # or "leave" 
+
+ Multiple triggers 
+
+It is possible to specify multiple triggers for the same rule. To do so just prefix the first line of each trigger with a dash (-) and indent the next lines accordingly. Whenever one of the triggers fires, processing of your automation rule begins. 
+
+ automation : 
+ triggers : 
+ # first trigger 
+ - trigger : time_pattern 
+ minutes : 5 
+ # our second trigger is the sunset 
+ - trigger : sun 
+ event : sunset 
+
+ Multiple entity IDs for the same trigger 
+
+It is possible to specify multiple entities for the same trigger. To do so add multiple entities using a nested list. The trigger will fire and start, processing your automation each time the trigger is true for any entity listed. 
+
+ automation : 
+ triggers : 
+ - trigger : state 
+ entity_id : 
+ - sensor.one 
+ - sensor.two 
+ - sensor.three 
+
+ Disabling a trigger 
+
+Every individual trigger in an automation can be disabled, without removing it.
+To do so, add enabled: false to the trigger. For example: 
+
+ # Example script with a disabled trigger 
+ automation : 
+ triggers : 
+ # This trigger will not trigger, as it is disabled. 
+ # This automation does not run when the sun is set. 
+ - enabled : false 
+ trigger : sun 
+ event : sunset 
+
+ # This trigger will fire, as it is not disabled. 
+ - trigger : time 
+ at : " 15:32:00" 
+
+Triggers can also be disabled based on limited templates or blueprint inputs. These are only evaluated once when the automation is loaded. 
+
+ blueprint : 
+ input : 
+ input_boolean : 
+ name : Boolean 
+ selector : 
+ boolean : 
+ input_number : 
+ name : Number 
+ selector : 
+ number : 
+ min : 0 
+ max : 100 
+
+ trigger_variables : 
+ _enable_number : !input input_number 
+
+ triggers : 
+ - trigger : sun 
+ event_type : sunrise 
+ enabled : !input input_boolean 
+ - trigger : sun 
+ event_type : sunset 
+ enabled : " {{ _enable_number < 50 }}" 
+
+ Merging lists of triggers 
+
+ Note 
+
+This feature requires Home Assistant version 2024.10 or later. If using this in a blueprint, set the min_version for the blueprint to at least this version. See the blueprint schema documentation for more details. 
+
+In some cases, like when using blueprints with trigger selectors, you may need to insert a second list of triggers into the main trigger list. You can do this by adding a dictionary in the main trigger list with only the triggers key, and the value for that key contains a second list of triggers. These will then be flattened into a single list of triggers. For example: 
+
+ blueprint : 
+ name : Nested Trigger Blueprint 
+ domain : automation 
+ input : 
+ usertrigger : 
+ selector : 
+ trigger : 
+
+ triggers : 
+ - trigger : event 
+ event_type : manual_event 
+ - triggers : !input usertrigger 
+
+This blueprint automation can then be triggered either by the fixed manual_event trigger, or additionally by any triggers selected in the trigger selector. This is also applicable for wait_for_trigger action. 
+ Creating an automation with actions that depend on different triggers 
+
+Instead of creating many automations for different groups of related triggers and actions, you can build a single one in the visual editor of the UI by following the steps below. 
+
+Go to Settings > Automations & scenes . 
+
+In the lower right corner, select Create automation > Create new automation . 
+
+In the When section, select Add trigger . 
+
+Search for the trigger using the search box, for example, and then select it. 
+
+In the trigger window on the right, edit the Trigger ID by going to the three dots menu > Edit ID . 
+
+In the Then do section, select Add action and then select the Choose block. 
+
+Expand the option section, select Add condition and, from the By type list, select the Triggered by condition. 
+
+In the condition window on the right, select the trigger ID that you added in step 5 and then Save . 
+
+In the section of the same option, select Add action and choose the action that will be fired by the related trigger. 
+
+In the action window on the right, select the target or group of targets, input any other requested data and select Save . 
+
+You can add more conditions and actions to that option by repeating steps 6 to 10. 
+
+Repeat steps 3 to 11 to add another trigger and related option for the new condition and action. 
+
+ Related topics
+
+ Adding a custom sentence to trigger an automation
+
+ Help us improve our documentation 
+
+ Suggest an edit to this page, or provide/view feedback for this page.
+
+Edit 
+
+Provide feedback 
+
+View given feedback 
+
+ ## Documentation Overview
+ |
+ FAQ
+ |
+ Glossary
+
+ Automations
+
+ Understanding automations
+
+Using automation blueprints 
+
+Editor 
+
+Triggers 
+
+Conditions 
+
+Actions 
+
+Run modes 
+
+Automation actions 
+
+Templates 
+
+YAML 
+
+Testing and troubleshooting automations 
+
+ Scenes
+
+ Blueprints
+
+ Scripts
+
+ Dashboards
+
+ Voice assistants
+
+ Organization
+
+ Home energy management
+
+ Templating
+
+ Common tasks
+
+ Configuration
+
+ Authentication
+
+ Tools and helpers
+
+ iOS and Android apps
+
+ Official hardware
+
+Home Assistant Green 
+
+Home Assistant Connect ZBT-1 
+
+Home Assistant Connect ZBT-2 
+
+Home Assistant Connect ZWA-2 
+
+Home Assistant Yellow 
+
+Home Assistant Voice Preview Edition 
+
+## On this page
+
+Choosing a trigger 
+
+Elements of a trigger in YAML
+
+Trigger ID 
+
+Trigger variables 
+
+Types of triggers
+
+Event trigger 
+
+Home Assistant trigger 
+
+MQTT trigger 
+
+Numeric state trigger 
+
+Sentence trigger 
+
+State trigger 
+
+Sun trigger 
+
+Tag trigger 
+
+Template trigger 
+
+Time pattern trigger 
+
+Time trigger 
+
+Webhook trigger 
+
+Zone trigger 
+
+Unavailable and unknown state behavior in triggers 
+
+Multiple triggers 
+
+Multiple entity IDs for the same trigger 
+
+Disabling a trigger 
+
+Merging lists of triggers 
+
+Creating an automation with actions that depend on different triggers 
+
+Related topics 
+
+Back to top 
+
+ Home Assistant is a project from the Open Home Foundation.
+
+## Join us and contribute!
+
+GitHub repo 
+
+Developers Portal 
+
+Design Portal 
+
+Data Science Portal 
+
+Community Forum 
+
+Creator Network 
+
+Works with Home Assistant 
+
+Our community 
+
+Reporting issues 
+
+## System status
+
+ Integration Alerts
+
+Security Alerts 
+
+ System Status
+
+## Companion apps
+
+iOS and Apple devices 
+
+Android and Wear OS 
+
+...and more! 
+
+## Support us
+
+Merch store 
+
+Home Assistant Cloud 
+
+## Governance
+
+Privacy Notices 
+
+Contributor License Agreement 
+
+Terms of Service 
+
+Code of Conduct 
+
+Credits 
+
+License 
+
+## Follow us
+
+Sign up for our newsletter 
+
+ For partnership inquiries please check out Works with Home Assistant. For media, email our team. For other questions, you can contact support (No technical support!)
+
+ This website uses privacy-first analytics to help us improve the site. You can view all data in our public dashboard.
+
+ Website powered by Jekyll
+
+ Originally based on the Oscailte theme
+
+## Source: https://www.home-assistant.io/docs/automation/action/
+
+Automation actions - Home Assistant 
+
+ 2026.8.3
+
+Getting started 
+
+ Documentation
+
+Installation 
+
+Automations 
+
+Dashboards 
+
+Voice assistants 
+
+Device organization 
+
+Energy management 
+
+Templating 
+
+Configuration using the YAML file 
+
+ Our hardware
+
+Home Assistant Green 
+
+Connect ZBT-2 
+
+Connect ZWA-2 
+
+Voice Preview Edition 
+
+Integrations 
+
+Blog 
+
+Need help? 
+
+ Home
+
+ ▸ Documentation
+
+ ▸ Automation
+
+ Automation actions
+
+The action of an automation is what is being executed when an automation fires. The action part follows the script syntax which can be used to interact with anything via other actions or events. 
+
+For actions, you can specify the entity_id that it should apply to and optional parameters (to specify for example the brightness). 
+
+You can also perform the action to activate a scene which will allow you to define how you want your devices to be and have Home Assistant perform the right action. 
+
+ automation : 
+ # Change the light in the kitchen and living room to 150 brightness and color red. 
+ triggers : 
+ - trigger : sun 
+ event : sunset 
+ actions : 
+ - action : light.turn_on 
+ target : 
+ entity_id : 
+ - light.kitchen 
+ - light.living_room 
+ data : 
+ brightness : 150 
+ rgb_color : [ 255 , 0 , 0 ] 
+
+ automation 2 : 
+ # Notify me on my mobile phone of an event 
+ triggers : 
+ - trigger : sun 
+ event : sunset 
+ offset : -00:30 
+ variables : 
+ notification_action : notify.paulus_iphone 
+ actions : 
+ # Actions are scripts so can also be a list of actions 
+ - action : " {{ notification_action }}" 
+ data : 
+ message : " Beautiful sunset!" 
+ - delay : 0:35 
+ - action : notify.notify 
+ data : 
+ message : " Oh wow you really missed something great." 
+
+Conditions can also be part of an action. You can combine multiple actions and conditions in a single action, and they will be processed in the order you put them in. If the result of a condition is false, the action will stop there so any action after that condition will not be executed. 
+
+ automation : 
+ - alias : " Office at evening" 
+ triggers : 
+ - trigger : state 
+ entity_id : sensor.office_occupancy 
+ to : " on" 
+ actions : 
+ - action : notify.notify 
+ data : 
+ message : " Testing conditional actions" 
+ - condition : or 
+ conditions : 
+ - condition : numeric_state 
+ entity_id : sun.sun 
+ attribute : elevation 
+ below : 4 
+ - condition : numeric_state 
+ entity_id : sensor.office_illuminance 
+ below : 10 
+ - action : scene.turn_on 
+ target : 
+ entity_id : scene.office_at_evening 
+ - action : light.turn_on 
+ target : " {{ {'entity_id': ['light.office', 'light.office_2']} }}" 
+ - action : switch.turn_on 
+ target : 
+ label_id : " {{ ['office_evening', 'office_after_15'] }}" 
+
+ Help us improve our documentation 
+
+ Suggest an edit to this page, or provide/view feedback for this page.
+
+Edit 
+
+Provide feedback 
+
+View given feedback 
+
+ ## Documentation Overview
+ |
+ FAQ
+ |
+ Glossary
+
+ Automations
+
+ Understanding automations
+
+Using automation blueprints 
+
+Editor 
+
+Triggers 
+
+Conditions 
+
+Actions 
+
+Run modes 
+
+Automation actions 
+
+Templates 
+
+YAML 
+
+Testing and troubleshooting automations 
+
+ Scenes
+
+ Blueprints
+
+ Scripts
+
+ Dashboards
+
+ Voice assistants
+
+ Organization
+
+ Home energy management
+
+ Templating
+
+ Common tasks
+
+ Configuration
+
+ Authentication
+
+ Tools and helpers
+
+ iOS and Android apps
+
+ Official hardware
+
+Home Assistant Green 
+
+Home Assistant Connect ZBT-1 
+
+Home Assistant Connect ZBT-2 
+
+Home Assistant Connect ZWA-2 
+
+Home Assistant Yellow 
+
+Home Assistant Voice Preview Edition 
+
+ Home Assistant is a project from the Open Home Foundation.
+
+## Join us and contribute!
+
+GitHub repo 
+
+Developers Portal 
+
+Design Portal 
+
+Data Science Portal 
+
+Community Forum 
+
+Creator Network 
+
+Works with Home Assistant 
+
+Our community 
+
+Reporting issues 
+
+## System status
+
+ Integration Alerts
+
+Security Alerts 
+
+ System Status
+
+## Companion apps
+
+iOS and Apple devices 
+
+Android and Wear OS 
+
+...and more! 
+
+## Support us
+
+Merch store 
+
+Home Assistant Cloud 
+
+## Governance
+
+Privacy Notices 
+
+Contributor License Agreement 
+
+Terms of Service 
+
+Code of Conduct 
+
+Credits 
+
+License 
+
+## Follow us
+
+Sign up for our newsletter 
+
+ For partnership inquiries please check out Works with Home Assistant. For media, email our team. For other questions, you can contact support (No technical support!)
+
+ This website uses privacy-first analytics to help us improve the site. You can view all data in our public dashboard.
+
+ Website powered by Jekyll
+
+ Originally based on the Oscailte theme
