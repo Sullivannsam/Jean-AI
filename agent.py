@@ -47,7 +47,7 @@ console = Console()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 MODEL_NAME = os.getenv("MODEL_NAME", "my-agent")
-MAX_TOOL_STEPS = int(os.getenv("MAX_TOOL_STEPS", "8"))
+MAX_TOOL_STEPS = int(os.getenv("MAX_TOOL_STEPS", "16"))
 WORKDIR_SCOPE = Path.cwd()
 
 # How long Ollama should keep the model loaded in RAM between calls. Without
@@ -275,20 +275,27 @@ def run_shell(cmd: str) -> dict:
     comment = ""
     if classification == "deny":
         console.print("[bold red]This command is on your denylist and won't be run.[/bold red]")
-        return {"stdout": "", "stderr": f"Command '{cmd}' blocked by denylist.", "exit_code": -2}
+        return {"stdout": "", "stderr": f"Command '{cmd}' blocked by denylist.", "exit_code": -2, "success": False}
     if classification == "allow":
         comment = "[green]safe command (allowlist)[/green]"
     else:
         comment = "[yellow]not on allowlist[/yellow]"
     console.print(Panel(cmd, title=f"[yellow]Proposed shell command — {comment}[/yellow]", border_style="yellow"))
     if classification == "unknown" and not confirm_action("Run this command?"):
-        return {"stdout": "", "stderr": "User declined to run this command.", "exit_code": -1}
+        return {"stdout": "", "stderr": "User declined to run this command.", "exit_code": -1, "success": False}
     log_event("shell", cmd=cmd, classification=classification)
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30, cwd=WORKDIR_SCOPE)
-        return {"stdout": result.stdout[-4000:], "stderr": result.stderr[-2000:], "exit_code": result.returncode}
+        return {
+            "stdout": result.stdout[-4000:],
+            "stderr": result.stderr[-2000:],
+            "exit_code": result.returncode,
+            # Explicit so the model can't mistake "produced some stdout" for
+            # "succeeded" — a nonzero exit code is a failure regardless of output.
+            "success": result.returncode == 0,
+        }
     except subprocess.TimeoutExpired:
-        return {"stdout": "", "stderr": "Command timed out after 30s.", "exit_code": -1}
+        return {"stdout": "", "stderr": "Command timed out after 30s.", "exit_code": -1, "success": False}
 
 
 def read_file(path: str) -> dict:
@@ -307,7 +314,16 @@ def write_file(path: str, content: str) -> dict:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content)
         log_event("file_write", path=str(p))
-        return {"status": "written", "path": str(p)}
+        written = p.read_text()
+        # Read back what's actually on disk (not just the input you sent) so
+        # you can catch a truncated/failed write without a separate read_file
+        # call — never assume the write matched your intent without checking.
+        return {
+            "status": "written",
+            "path": str(p),
+            "bytes_written": len(written),
+            "readback_preview": written[:300],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -756,10 +772,13 @@ def _find_balanced_object(text: str, start: int) -> tuple[str, int] | None:
     return None
 
 
-def try_parse_tool_call(text: str) -> dict | None:
+def try_parse_tool_call(text: str) -> tuple[dict, str] | None:
     """Extract a tool call from the model's reply, tolerating markdown code
-    fences, leading/trailing prose, and surplus whitespace. Returns the parsed
-    object only if it names a tool we know about."""
+    fences, leading/trailing prose, and surplus whitespace. Returns
+    (tool_call_obj, reasoning_text) where reasoning_text is whatever prose
+    preceded the JSON (the model's "why I'm doing this" — surfaced to the
+    user rather than silently discarded), or None if no recognized tool call
+    is found."""
     stripped = text.strip()
     # 1) drop ```json ... ``` fences
     if stripped.startswith("```"):
@@ -772,36 +791,78 @@ def try_parse_tool_call(text: str) -> dict | None:
         found = _find_balanced_object(stripped, start)
         if found is None:
             return None
-        raw, _end = found
-        start = _end + 1
+        raw, end = found
+        json_start = end + 1 - len(raw)
+        start = end + 1
         try:
             obj = json.loads(raw)
         except json.JSONDecodeError:
             continue  # invalid JSON inside braces — look for another object
         if isinstance(obj, dict) and obj.get("tool") in TOOLS:
-            return obj
+            reasoning = stripped[:json_start].strip()
+            return obj, reasoning
         # A valid object but not a tool call we recognise — keep scanning in
         # case the model emitted prose before the real call.
     return None
 
 
 def run_agent_turn(messages: list[dict]) -> str:
+    """Run the tool-call loop for one turn.
+
+    Two additions on top of the basic loop:
+    - Loop detection: if the model calls the exact same tool with the exact
+      same args twice in a row, that's not progress (same inputs -> same
+      result) — we flag it in the tool-result feedback so the model notices
+      and changes approach instead of silently burning its step budget.
+    - Graceful step-limit handling: on the last available step, we ask for a
+      summary of progress instead of letting the model attempt one more tool
+      call that then gets cut off mid-task with a dead-end message.
+    """
+    last_signature = None
     for step in range(MAX_TOOL_STEPS):
-        reply = call_model(messages)
-        tool_call = try_parse_tool_call(reply)
-        if tool_call is None:
+        call_messages = messages
+        if step == MAX_TOOL_STEPS - 1:
+            call_messages = messages + [{
+                "role": "user",
+                "content": (
+                    "You're at your step limit for this task. Don't call another "
+                    "tool — summarize what you've verified so far, what's left "
+                    "undone, and what to try next."
+                ),
+            }]
+        reply = call_model(call_messages)
+        parsed = try_parse_tool_call(reply)
+        if parsed is None:
             log_event("agent_reply", reply=reply)
             return reply
+        tool_call, reasoning = parsed
         tool_name = tool_call["tool"]
         args = tool_call.get("args", {})
         if not isinstance(args, dict):
             args = {}
+
+        signature = (tool_name, json.dumps(args, sort_keys=True, default=str))
+        repeated = signature == last_signature
+        last_signature = signature
+
+        if reasoning:
+            console.print(f"[dim italic]{reasoning}[/dim italic]")
         console.print(f"[cyan]→ calling tool:[/cyan] {tool_name}({args})")
-        log_event("tool_call", tool=tool_name, args=json.dumps(args, default=str))
+        log_event("tool_call", tool=tool_name, args=json.dumps(args, default=str), reasoning=reasoning)
         result = TOOLS[tool_name](args)
         log_event("tool_result", tool=tool_name, result=json.dumps(result, default=str)[:2000])
         messages.append({"role": "assistant", "content": reply})
-        messages.append({"role": "user", "content": f"Tool result: {json.dumps(result, default=str)}"})
+
+        tool_result_msg = f"Tool result: {json.dumps(result, default=str)}"
+        if repeated:
+            console.print("[yellow]⚠ repeated identical tool call — nudging for a different approach[/yellow]")
+            tool_result_msg += (
+                "\nNote: you just made this exact call with the exact same args "
+                "again — that can't produce new information. Try a different "
+                "approach, check something else, or tell the user what's "
+                "blocking you instead of repeating this call."
+            )
+        messages.append({"role": "user", "content": tool_result_msg})
     return "Reached max tool steps for this turn without a final answer."
 
 
