@@ -6,11 +6,14 @@ set -euo pipefail
 AGENT_DIR="${JEAN_DIR:-$HOME/Personal-Ai-Agent/Model_Components}"
 cd "$AGENT_DIR"
 
-# On exit (Ctrl+C or normal quit), unload Ollama models so the ~4.7GB model
-# doesn't keep eating RAM. Ollama itself stays running (it's the service we
-# need next time), only the loaded models are evicted.
+# NOTE: this used to unload the model from RAM on every exit (via `ollama
+# stop`) to save memory. That directly fights OLLAMA_KEEP_ALIVE, which keeps
+# the model warm between messages — every fresh `jean` launch was paying a
+# full model reload from a cold unload the previous session left behind.
+# Disabled by default now for speed (model stays resident, ~4.7GB RAM).
+# Set JEAN_UNLOAD_ON_EXIT=true if you want the RAM back instead.
 cleanup() {
-    if command -v ollama >/dev/null 2>&1 && ollama ps 2>/dev/null | grep -q .; then
+    if [ "${JEAN_UNLOAD_ON_EXIT:-false}" = "true" ] && command -v ollama >/dev/null 2>&1 && ollama ps 2>/dev/null | grep -q .; then
         ollama ps 2>/dev/null | tail -n +2 | awk '{print $1}' | while read -r m; do
             ollama stop "$m" >/dev/null 2>&1 || true
         done
